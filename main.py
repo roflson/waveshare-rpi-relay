@@ -5,14 +5,22 @@ import time
 #These mappings come from the waveshare board itself, it has the pin/relay mappings next to the jumpers on the board.
 pin_mapping = {
     'tv_blind': {
-        'down': 16,
-        'up': 13
+        'down': 13,
+        'up': 16
     },
     'other_blind': {
-        'up': 6,
-        'down': 5
+        'up': 5,
+        'down': 6
     }
 }
+
+def is_enabled(channel_id):
+    path = f"/sys/class/gpio/gpio{channel_id}/value"
+    with open(path) as f:
+        lines = f.readlines()
+        
+    if '1' == lines[0].strip():
+        return True
 
 def check_channel(channel_id):
     path = f"/sys/class/gpio/gpio{channel_id}"
@@ -77,14 +85,24 @@ class Scenario:
             time.sleep(1)
 
 commands = {
-    'full_raise': Command('up', 120),
-    'full_lower': Command('down', 120),
-    'lower_75': Command('down', 60)
+    'full_raise': Command('up', 100),
+    'full_lower': Command('down', 100),
+    'lower_75': Command('down', 60),
+    'raise_25': Command('up', 30),
+    'flip_blind_down': Command('down', 4),
+    'up_10': Command('up', 10),
+    'down_10': Command('down', 10)
 }
             
 scenarios = {
     'raise_other_blind': Scenario(pin_mapping['other_blind'], [commands['full_raise']]),
-    'other_blind_daytime': Scenario(pin_mapping['other_blind'], [commands['full_raise'], commands['lower_75']])
+    'lower_other_blind': Scenario(pin_mapping['other_blind'], [commands['full_lower']]),
+    'lower_tv_blind': Scenario(pin_mapping['tv_blind'], [commands['full_lower']]),
+    'tv_blind_daytime': Scenario(pin_mapping['tv_blind'], [commands['full_lower'], commands['raise_25'], commands['flip_blind_down']]),
+    'test_tv_blind_up': Scenario(pin_mapping['tv_blind'], [commands['up_10']]),
+    'test_tv_blind_down': Scenario(pin_mapping['tv_blind'], [commands['down_10']]),
+    'test_other_blind_up': Scenario(pin_mapping['other_blind'], [commands['up_10']]),
+    'test_other_blind_down': Scenario(pin_mapping['other_blind'], [commands['down_10']]),
 }
             
 if __name__ == "__main__":
@@ -94,6 +112,21 @@ if __name__ == "__main__":
                 enable_channel(direction)
 
     scenario_name = sys.argv[1]
+    if scenario_name == 'off':
+        for blind in pin_mapping.values():
+            for direction in blind.values():
+                disable_relay(direction)
+        sys.exit(0)
+
+    if scenario_name == 'status':
+        for blind in pin_mapping.values():
+            for direction in blind.values():
+                if is_enabled(direction):
+                    print("true")
+                    sys.exit(0)
+        print("false")
+        sys.exit(0)
+    
     if scenario_name not in scenarios:
         raise ValueError('Invalid scenario')
     scenarios[scenario_name].run()
