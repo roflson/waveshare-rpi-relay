@@ -89,7 +89,7 @@ commands = {
     'full_lower': Command('down', 100),
     'lower_75': Command('down', 60),
     'raise_25': Command('up', 30),
-    'flip_blind_down': Command('down', 4),
+    'flip_blind_down': Command('down', 5),
     'up_10': Command('up', 10),
     'down_10': Command('down', 10)
 }
